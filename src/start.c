@@ -17,5 +17,6 @@ void start()
     console_putchar('S');
     console_putchar('O');
     console_putchar('S');
+    console_putchar('\n');
     //shutdown();
 }
