@@ -7,7 +7,8 @@ SECTIONS
     . = 0x80200000;
     .text : {
         *(.text .text.*)
-        /* . = ALIGN(4k); */
+         . = ALIGN(4k); 
+        PROVIDE(kernel_text_end = .);
     }
     PROVIDE(kernel_end = .);
 }

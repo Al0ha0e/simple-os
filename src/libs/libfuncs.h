@@ -4,4 +4,6 @@
 
 void *memset(void *dst, int c, uint n);
 
+void printf(char *fmt, ...);
+
 #endif

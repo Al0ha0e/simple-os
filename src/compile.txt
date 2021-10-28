@@ -6,6 +6,6 @@ target remote 82.156.34.131:1234
 qemu-system-mips -cpu mips32r6-generic -s -S -smp 1 -serial stdio -nographic -monitor pty -m 512M -kernel test.o
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-riscv64-unknown-elf-gcc -g -nostdlib entry.S start.c -T test.ld -o test.o
+riscv64-unknown-elf-gcc -g -nostdlib  -mcmodel=medany entry.S start.c -T test.ld -o test.o
 
 qemu-system-riscv64 -s -machine virt -bios default -kernel test.o -m 512M -smp 1 -nographic
