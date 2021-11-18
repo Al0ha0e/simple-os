@@ -11,6 +11,35 @@
 #define MSTATUS_MPP_U (0L << 11)
 #define MSTATUS_MIE (1L << 3) // machine-mode interrupt enable.
 
+typedef struct rv64sstatus
+{
+    uint8 uie : 1;
+    uint8 sie : 1;
+    uint8 : 2;
+    uint8 upie : 1;
+    uint8 spie : 1;
+    uint8 : 2;
+    uint8 spp : 1;
+    uint8 : 4;
+    uint8 fs : 2;
+    uint8 xs : 2;
+    uint8 : 1;
+    uint8 sum : 1;
+    uint8 mxr : 1;
+    uint16 : 12;
+    uint8 uxl : 2;
+    uint32 : 29;
+    uint8 sd : 1;
+} rv64_sstatus;
+
+static inline uint64 r_time()
+{
+    uint64 x;
+    asm volatile("csrr %0, time"
+                 : "=r"(x));
+    return x;
+}
+
 static inline uint64 r_mstatus()
 {
     uint64 ret;
@@ -22,6 +51,21 @@ static inline uint64 r_mstatus()
 static inline void w_mstatus(uint64 x)
 {
     asm volatile("csrw mstatus, %0"
+                 :
+                 : "r"(x));
+}
+
+static inline uint64 r_sstatus()
+{
+    uint64 x;
+    asm volatile("csrr %0, sstatus"
+                 : "=r"(x));
+    return x;
+}
+
+static inline void w_sstatus(uint64 x)
+{
+    asm volatile("csrw sstatus, %0"
                  :
                  : "r"(x));
 }
@@ -53,6 +97,34 @@ static inline uint64 sbi_call(uint64 arg0, uint64 arg1, uint64 arg2, uint64 whic
     //     //: "memory");     // 如果汇编可能改变内存，则需要加入 memory 选项
     //     // : "volatile");
     return ret;
+}
+
+static inline uint64 r_sie()
+{
+    uint64 x;
+    asm volatile("csrr %0, sie"
+                 : "=r"(x));
+    return x;
+}
+
+static inline void w_sie(uint64 x)
+{
+    asm volatile("csrw sie, %0"
+                 :
+                 : "r"(x));
+}
+
+typedef struct stvec
+{
+    uint8 mode : 2;
+    uint64 base : 62;
+} st_vec;
+
+static inline void w_stvec(uint64 x)
+{
+    asm volatile("csrw stvec, %0"
+                 :
+                 : "r"(x));
 }
 
 #define SATP_SV39 (8L << 60)
@@ -94,4 +166,18 @@ static inline void init_sv39pte(sv39_pte *pte, void *ppn, uint8 flags)
     *((uint64 *)pte) = (uint64)flags | 1;
     set_sv39pte_ppn(pte, ppn);
 }
+
+typedef struct rv64scause
+{
+    uint64 exception_code : 63;
+    uint8 interrupt : 1;
+
+} rv64_scause;
+
+typedef struct rv64context
+{
+    uint64 gprs[32];
+    uint64 sstatus;
+    uint64 sepc;
+} rv64_context;
 #endif

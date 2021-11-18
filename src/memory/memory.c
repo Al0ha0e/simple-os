@@ -129,7 +129,7 @@ void *init_pgtable()
     map_pageseg(root_pgtable, KERNBASE, KERNBASE, ((uint64)kernel_text_end - KERNBASE) >> 12, SV39_R | SV39_X);
     printf("PTE AT %p\n", find_pte(root_pgtable, KERNBASE));
     map_pageseg(root_pgtable, kernel_text_end, kernel_text_end, (PHYSTOP - (uint64)kernel_text_end) >> 12, SV39_R | SV39_W);
-    printf("PTE AT %p\n", find_pte(kernel_text_end, KERNBASE));
+    printf("PTE AT %p\n", find_pte(root_pgtable, kernel_text_end));
     printf("page table init ok \n"); //%d %d\n", sb1, sb2);
     return root_pgtable;
 }
