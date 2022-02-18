@@ -8,6 +8,6 @@ extern void _interrupt();
 
 void init_trap();
 
-void handle_interrupt(rv64_context ctx, rv64_scause scause, uint64 stval);
+void handle_trap(rv64_context ctx, rv64_scause scause, uint64 stval);
 
 #endif

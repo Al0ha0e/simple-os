@@ -1,2 +1,6 @@
 *.o
+*.asm
+*.sym
+kernel
 test.txt
+compile.txt

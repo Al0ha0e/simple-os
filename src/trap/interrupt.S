@@ -1,4 +1,4 @@
-.globl handle_interrupt
+.globl handle_trap
 
 .macro SAVE reg, offset
     sd  \reg, \offset*8(sp)
@@ -64,7 +64,7 @@ _from_user:
     csrr    a1, scause
 
     csrr    a2, stval
-    jal handle_interrupt
+    jal handle_trap
 
     .globl _restore
 

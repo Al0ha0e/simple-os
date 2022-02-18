@@ -12,7 +12,7 @@ void init_trap()
 
 static uint64 prev = 0;
 
-void handle_interrupt(rv64_context ctx, rv64_scause scause, uint64 stval)
+void handle_trap(rv64_context ctx, rv64_scause scause, uint64 stval)
 {
     uint64 now = r_time();
     printf("INTERRUPT scause %p stval %p sepc %p det %d\n", scause, stval, ctx.sepc, now - prev);
