@@ -24,6 +24,9 @@ OBJS = \
 	src/trap/interrupt.o\
 	src/proc/proc.o
 
+USER_OBJS = \
+	user/root_proc.o
+
 # Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
 TOOLPREFIX := $(shell if riscv64-unknown-elf-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
@@ -54,7 +57,7 @@ kernel: $(OBJS) src/kernel.ld
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
-src/user.o: src/user.S user/test
+src/user.o: src/user.S $(USER_OBJS)
 	$(CC) -c $(CFLAGS) src/user.S -o src/user.o
 
 # include .depend
@@ -64,10 +67,15 @@ src/user.o: src/user.S user/test
 # 	rm -f ./.depend
 # 	$(CC) -MM $(SRCS) > ./.depend;
 
-test: user/entry.o user/test.o user/user.ld
-	$(LD) $(LDFLAGS) -T user/user.ld -o user/test user/entry.o user/test.o
-	$(OBJDUMP) -S user/test > user/test.asm
-	$(OBJDUMP) -t user/test | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > user/test.sym
+user/root_proc.o: user/entry.o user/root_proc.c user/user.ld
+	$(CC) -c -nostdlib -mcmodel=medany user/root_proc.c -o user/root_proc.tmp
+	$(LD) $(LDFLAGS) -T user/user.ld -o user/root_proc.o user/entry.o user/root_proc.tmp
+	rm user/root_proc.tmp
+
+# test: user/entry.o user/test.o user/user.ld
+# 	$(LD) $(LDFLAGS) -T user/user.ld -o user/test user/entry.o user/test.o
+# 	$(OBJDUMP) -S user/test > user/test.asm
+# 	$(OBJDUMP) -t user/test | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > user/test.sym
 
 clean:
 	rm -f $(OBJS)

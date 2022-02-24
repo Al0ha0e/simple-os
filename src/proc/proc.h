@@ -3,12 +3,14 @@
 
 #include "../riscv/riscv.h"
 #include "../libs/elf.h"
+#include "../libs/ds.h"
 
 typedef struct process_control_block
 {
     uint32 pid;
     void *pagetable_root;
     rv64_context *kernel_context;
+    vector addr_space;
 } process_control_block;
 
 process_control_block *get_curr_pcb();

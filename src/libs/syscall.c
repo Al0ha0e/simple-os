@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "types.h"
+#include "libfuncs.h"
 #include "../proc/proc.h"
 #include "../memory/memory.h"
 #include "../riscv/sbi.h"
@@ -32,6 +33,18 @@ static void sys_exit(int32 state)
     }
 }
 
+static void sys_sched_yield()
+{
+    static int sched_cnt = 0;
+    printf("SCHED %d\n", sched_cnt++);
+    if (sched_cnt == 5)
+    {
+        while (1)
+        {
+        }
+    }
+}
+
 void handle_syscall(uint64 arg0, uint64 arg1, uint64 arg2, uint64 which)
 {
     switch (which)
@@ -41,6 +54,9 @@ void handle_syscall(uint64 arg0, uint64 arg1, uint64 arg2, uint64 which)
         break;
     case SYSCALL_EXIT:
         sys_exit(arg0);
+        break;
+    case SYSCALL_SCHED_YIELD:
+        sys_sched_yield();
         break;
     default:
         break;

@@ -4,5 +4,5 @@
 .globl app_0_end
 
 app_0_start:
-    .incbin "user/test"
+    .incbin "user/root_proc.o"
 app_0_end:

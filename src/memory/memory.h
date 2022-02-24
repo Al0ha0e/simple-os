@@ -2,6 +2,7 @@
 #define MEMORY_H
 
 #include "../libs/types.h"
+#include "../libs/ds.h"
 #include "../libs/elf.h"
 #include "../riscv/riscv.h"
 
@@ -35,12 +36,20 @@ typedef struct empty_block
 
 #define EMPTY_BLOCK_SIZE sizeof(empty_block)
 
+typedef struct user_kernel_addr_mapping
+{
+    void *uaddr;
+    void *kaddr;
+} user_kernel_addr_mapping;
+
 typedef struct memory_seg
 {
-    void *st;
-    uint32 page_count;
+    void *st_vaddr;
     uint8 flags;
+    vector user_kernel;
 } memory_seg;
+
+memory_seg *init_memory_seg(memory_seg *seg);
 
 void init_memory();
 
@@ -59,8 +68,9 @@ void init_allocator(void *heap_st, uint32 n);
 void *malloc(size_t size);
 void free(void *addr);
 
-void *set_user_context(uint32 pid);
-void *init_userproc_pgtable(elf_header *elf, void *ctx_page);
+void *init_user_context(uint32 pid);
+void *init_userproc_pgtable(void *ctx_page);
+void init_userproc_addr_space(void *user_pgtable_root, elf_header *elf, vector *segs);
 
 void *convert_user_addr(void *user_pgtable, void *addr);
 #endif

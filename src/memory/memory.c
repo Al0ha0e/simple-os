@@ -14,8 +14,7 @@ extern char kernel_rodata_end[];
 extern char kernel_data_end[];
 extern char trampoline_start[];
 
-static inline uint64
-get_pgn_floor(void *addr)
+static inline uint64 get_pgn_floor(void *addr)
 {
     return (uint64)addr & PAGEMASK;
 }
@@ -26,6 +25,12 @@ static inline uint64 get_pgn_ceil(void *addr)
     if ((uint64)addr & (PAGESIZE - 1))
         return (void *)(ret + PAGESIZE);
     return (void *)ret;
+}
+
+memory_seg *init_memory_seg(memory_seg *seg)
+{
+    init_vector(&seg->user_kernel, sizeof(user_kernel_addr_mapping), 4);
+    return seg;
 }
 
 static void init_identical_pglist()
@@ -164,47 +169,49 @@ static void *init_kernel_pgtable()
     return kernel_pgtable_root;
 }
 
-static void map_user_pageseg(void *root, void *vaddr, void *content, size_t size, uint8 flags)
+static void map_user_pageseg(void *root, memory_seg *seg, void *vaddr, void *content, size_t size, uint8 flags)
 {
-    printf("MAP USER PAGESEG root %p vaddr %p c1 %p size %p flags %d\n", root, vaddr, content, size, flags);
+    seg->flags = flags;
+    seg->st_vaddr = vaddr;
+    user_kernel_addr_mapping *pair;
     for (size_t offset = 0; offset < size; offset += PAGESIZE)
     {
         char *dst = (char *)vaddr + offset;
         char *kernel_dst = alloc_identical_page();
         map_page(root, dst, kernel_dst, flags);
-        printf("MAP OK %p %p\n", kernel_dst, *((uint64 *)kernel_dst));
+        pair = vector_extend(&seg->user_kernel);
+        pair->uaddr = dst;
+        pair->kaddr = kernel_dst;
         if (content)
-        {
             memcpy(kernel_dst, (char *)content + offset, PAGESIZE <= size - offset ? PAGESIZE : size - offset);
-            printf("COPY OK %p\n", *((uint64 *)kernel_dst));
-        }
     }
 }
 
-void *init_userproc_pgtable(elf_header *elf, void *ctx_page)
+void *init_userproc_pgtable(void *ctx_page)
 {
     void *user_pgtable_root = alloc_identical_page();
-
-    program_header *progh = ((char *)elf) + elf->phoff;
-    uint8 flags;
-    for (int i = 0; i < elf->phnum; i++)
-    {
-        printf("PROGH off %p vaddr %p memsz %p flags %d\n", progh->off, progh->vaddr, progh->memsz, progh->flags);
-        flags = SV39_U | (progh->flags.E << 3) | (progh->flags.W << 2) | (progh->flags.R << 1);
-        printf("PROG2 E %d W %d R %d\n", progh->flags.E, progh->flags.W, progh->flags.R);
-        map_user_pageseg(user_pgtable_root, progh->vaddr, ((char *)elf) + progh->off, progh->memsz, flags);
-        progh = progh + 1;
-    }
-    printf("USER MAP OK1\n");
-    map_user_pageseg(user_pgtable_root, USER_STACK_PAGE, NULL, USER_STACK_INIT_PAGENUM * PAGESIZE, SV39_U | SV39_R | SV39_W);
-    printf("USER MAP OK2\n");
     map_page(user_pgtable_root, TRAMPOLINE_PAGE, trampoline_start, SV39_X | SV39_R);
     map_page(user_pgtable_root, USER_CONTEXT_PAGE, ctx_page, SV39_R | SV39_W);
-    printf("USER ALL MAP OK\n");
     return user_pgtable_root;
 }
 
-void *set_user_context(uint32 pid)
+void init_userproc_addr_space(void *user_pgtable_root, elf_header *elf, vector *segs)
+{
+    program_header *progh = ((char *)elf) + elf->phoff;
+    uint8 flags;
+    memory_seg *seg;
+    for (int i = 0; i < elf->phnum; i++)
+    {
+        flags = SV39_U | (progh->flags.E << 3) | (progh->flags.W << 2) | (progh->flags.R << 1);
+        seg = init_memory_seg(vector_extend(segs));
+        map_user_pageseg(user_pgtable_root, seg, progh->vaddr, ((char *)elf) + progh->off, progh->memsz, flags);
+        progh = progh + 1;
+    }
+    seg = init_memory_seg(vector_extend(segs));
+    map_user_pageseg(user_pgtable_root, seg, USER_STACK_PAGE, NULL, USER_STACK_INIT_PAGENUM * PAGESIZE, SV39_U | SV39_R | SV39_W);
+}
+
+void *init_user_context(uint32 pid)
 {
     void *ret = alloc_free_page();
     map_page(kernel_pgtable_root, GET_KERNEL_USER_CONTEXT_PAGE(pid), ret, SV39_R | SV39_W);
