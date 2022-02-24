@@ -145,6 +145,7 @@ typedef struct sv39pte
     uint16 reserved : 10;
 } sv39_pte;
 
+#define SV39_U (1 << 4)
 #define SV39_X (1 << 3)
 #define SV39_W (1 << 2)
 #define SV39_R (1 << 1)
@@ -179,5 +180,8 @@ typedef struct rv64context
     uint64 gprs[32];
     uint64 sstatus;
     uint64 sepc;
+    void *kernel_pgtable;
+    void *kernel_context;
+    void *trap_handler;
 } rv64_context;
 #endif

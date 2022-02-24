@@ -1,4 +1,4 @@
-.text
+.section .text.entry
 .globl _entry
 _entry:
     la		sp, stack0		#

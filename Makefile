@@ -1,13 +1,28 @@
+SRCS = \
+	src/entry.S\
+	src/start.c\
+	src/user.S\
+	src/libs/libfuncs.c\
+	src/libs/ds.c\
+	src/libs/printf.c\
+	src/memory/memory.c\
+	src/memory/malloc.c\
+	src/trap/trap.c\
+	src/trap/interrupt.S
+
 OBJS = \
 	src/entry.o\
 	src/start.o\
+	src/user.o\
 	src/libs/libfuncs.o\
 	src/libs/ds.o\
 	src/libs/printf.o\
+	src/libs/syscall.o\
 	src/memory/memory.o\
 	src/memory/malloc.o\
 	src/trap/trap.o\
-	src/trap/interrupt.o
+	src/trap/interrupt.o\
+	src/proc/proc.o
 
 # Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
@@ -34,7 +49,26 @@ OBJDUMP = $(TOOLPREFIX)objdump
 CFLAGS = -g -nostdlib -mcmodel=medany
 LDFLAGS = -z max-page-size=4096
 
-kernel: $(OBJS) src/test.ld
-	$(LD) $(LDFLAGS) -T src/test.ld -o kernel $(OBJS) 
+kernel: $(OBJS) src/kernel.ld
+	$(LD) $(LDFLAGS) -T src/kernel.ld -o kernel $(OBJS) 
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
+
+src/user.o: src/user.S user/test
+	$(CC) -c $(CFLAGS) src/user.S -o src/user.o
+
+# include .depend
+# depend: .depend
+
+# .depend: $(SRCS)
+# 	rm -f ./.depend
+# 	$(CC) -MM $(SRCS) > ./.depend;
+
+test: user/entry.o user/test.o user/user.ld
+	$(LD) $(LDFLAGS) -T user/user.ld -o user/test user/entry.o user/test.o
+	$(OBJDUMP) -S user/test > user/test.asm
+	$(OBJDUMP) -t user/test | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > user/test.sym
+
+clean:
+	rm -f $(OBJS)
+	rm -f src/kernel

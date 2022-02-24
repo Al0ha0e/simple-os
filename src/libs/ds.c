@@ -10,7 +10,7 @@ void init_vector(vector *v, size_t item_size, uint32 capacity)
     v->buffer = malloc(item_size * capacity);
 }
 
-void push_back(vector *v, void *item)
+void vector_push_back(vector *v, void *item)
 {
     if (v->capacity == v->count)
     {
@@ -25,7 +25,7 @@ void push_back(vector *v, void *item)
     ++v->count;
 }
 
-void *get_item(vector *v, uint32 id)
+void *vector_get_item(vector *v, uint32 id)
 {
     if (id >= v->count)
         return NULL;

@@ -1,5 +1,3 @@
-.globl handle_trap
-
 .macro SAVE reg, offset
     sd  \reg, \offset*8(sp)
 .endm
@@ -8,20 +6,12 @@
     ld  \reg, \offset*8(sp)
 .endm
 
-    .section .text
-    .globl _interrupt
+.section .text.trampoline
 
-_interrupt:
-
+.globl _alltraps
+_alltraps:
     csrrw   sp, sscratch, sp
-    bnez    sp, _from_user
-_from_kernel:
-    csrr    sp, sscratch
-_from_user:
-    addi    sp, sp, -36*8
-
     SAVE    x1, 1
-
     csrrw   x1, sscratch, x0
     SAVE    x1, 2
     SAVE    x3, 3
@@ -59,28 +49,33 @@ _from_user:
     SAVE    t0, 32
     SAVE    t1, 33
 
+    LOAD    t0, 34
+    LOAD    t1, 36
+    LOAD    sp, 35
+    
     mv      a0, sp
 
     csrr    a1, scause
 
     csrr    a2, stval
-    jal handle_trap
 
-    .globl _restore
+    csrw    satp, t0
+    sfence.vma
 
+    jr      t1
+
+.globl _restore
 _restore:
+    csrw    satp, a1
+    sfence.vma
+    
+    csrw    sscratch, a0
+    mv      sp, a0
     LOAD    t0, 32
     LOAD    t1, 33
 
     csrw    sstatus, t0
     csrw    sepc, t1
-
-    andi    t0, t0, 1 << 8
-    bnez    t0, _to_kernel
-_to_user:
-    addi    t0, sp, 36*8
-    csrw    sscratch, t0
-_to_kernel:
 
     LOAD    x1, 1
     LOAD    x3, 3
@@ -113,5 +108,5 @@ _to_kernel:
     LOAD    x30, 30
     LOAD    x31, 31
 
-    LOAD    x2, 2
+    LOAD    sp, 2
     sret

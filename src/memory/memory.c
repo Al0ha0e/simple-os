@@ -1,6 +1,7 @@
 #include "memory.h"
 #include "../libs/types.h"
 #include "../libs/libfuncs.h"
+#include "../libs/elf.h"
 
 static page_list *identical_pglist;
 sv39_pte *kernel_pgtable_root;
@@ -9,8 +10,12 @@ static uint32 free_page_top;
 
 extern char kernel_end[];
 extern char kernel_text_end[];
+extern char kernel_rodata_end[];
+extern char kernel_data_end[];
+extern char trampoline_start[];
 
-static inline uint64 get_pgn_floor(void *addr)
+static inline uint64
+get_pgn_floor(void *addr)
 {
     return (uint64)addr & PAGEMASK;
 }
@@ -78,6 +83,11 @@ void free_free_page(void *page)
     free_pages[free_page_top++] = (uint64)page >> 12;
 }
 
+void *get_kernel_pgtable()
+{
+    return CONV_SV39_PGTABLE(kernel_pgtable_root);
+}
+
 sv39_pte *find_pte(sv39_pte *root, void *vaddr)
 {
     // printf("TRY FIND %p\n", vaddr);
@@ -139,19 +149,71 @@ static void *init_kernel_pgtable()
     printf("------start init page table------\n");
     kernel_pgtable_root = alloc_identical_page();
     printf("root_pagetable at %p\n", kernel_pgtable_root);
-    printf("map exeseg kernbase at %p kernel_text_end at %p\n", KERNBASE, kernel_text_end);
+    printf("kernbase:\t%p\nkernel_text_end:\t%p\nkernel_rodata_end:\t%p\nkernel_data_end:\t%p\nkernel_end:\t%p\n",
+           KERNBASE,
+           kernel_text_end,
+           kernel_rodata_end,
+           kernel_data_end,
+           kernel_end);
     map_pageseg(kernel_pgtable_root, KERNBASE, KERNBASE, ((uint64)kernel_text_end - KERNBASE) >> 12, SV39_R | SV39_X);
-    printf("PTE AT %p\n", find_pte(kernel_pgtable_root, KERNBASE));
-    map_pageseg(kernel_pgtable_root, kernel_text_end, kernel_text_end, (IDENTICAL_SEG_END - (uint64)kernel_text_end) >> 12, SV39_R | SV39_W);
-    printf("&&&&& %d %d\n", (PHYSTOP - IDENTICAL_SEG_END) >> 12, (PHYSTOP - (uint64)kernel_text_end) >> 12);
-    printf("PTE AT %p\n", find_pte(kernel_pgtable_root, kernel_text_end));
-    printf("page table init ok \n"); //%d %d\n", sb1, sb2);
+    map_pageseg(kernel_pgtable_root, kernel_text_end, kernel_text_end, ((uint64)kernel_rodata_end - (uint64)kernel_text_end) >> 12, SV39_R);
+    map_pageseg(kernel_pgtable_root, kernel_rodata_end, kernel_rodata_end, (IDENTICAL_SEG_END - (uint64)kernel_rodata_end) >> 12, SV39_R | SV39_W);
+    map_page(kernel_pgtable_root, TRAMPOLINE_PAGE, trampoline_start, SV39_X | SV39_R);
+
+    printf("page table init ok \n");
     return kernel_pgtable_root;
+}
+
+static void map_user_pageseg(void *root, void *vaddr, void *content, size_t size, uint8 flags)
+{
+    printf("MAP USER PAGESEG root %p vaddr %p c1 %p size %p flags %d\n", root, vaddr, content, size, flags);
+    for (size_t offset = 0; offset < size; offset += PAGESIZE)
+    {
+        char *dst = (char *)vaddr + offset;
+        char *kernel_dst = alloc_identical_page();
+        map_page(root, dst, kernel_dst, flags);
+        printf("MAP OK %p %p\n", kernel_dst, *((uint64 *)kernel_dst));
+        if (content)
+        {
+            memcpy(kernel_dst, (char *)content + offset, PAGESIZE <= size - offset ? PAGESIZE : size - offset);
+            printf("COPY OK %p\n", *((uint64 *)kernel_dst));
+        }
+    }
+}
+
+void *init_userproc_pgtable(elf_header *elf, void *ctx_page)
+{
+    void *user_pgtable_root = alloc_identical_page();
+
+    program_header *progh = ((char *)elf) + elf->phoff;
+    uint8 flags;
+    for (int i = 0; i < elf->phnum; i++)
+    {
+        printf("PROGH off %p vaddr %p memsz %p flags %d\n", progh->off, progh->vaddr, progh->memsz, progh->flags);
+        flags = SV39_U | (progh->flags.E << 3) | (progh->flags.W << 2) | (progh->flags.R << 1);
+        printf("PROG2 E %d W %d R %d\n", progh->flags.E, progh->flags.W, progh->flags.R);
+        map_user_pageseg(user_pgtable_root, progh->vaddr, ((char *)elf) + progh->off, progh->memsz, flags);
+        progh = progh + 1;
+    }
+    printf("USER MAP OK1\n");
+    map_user_pageseg(user_pgtable_root, USER_STACK_PAGE, NULL, USER_STACK_INIT_PAGENUM * PAGESIZE, SV39_U | SV39_R | SV39_W);
+    printf("USER MAP OK2\n");
+    map_page(user_pgtable_root, TRAMPOLINE_PAGE, trampoline_start, SV39_X | SV39_R);
+    map_page(user_pgtable_root, USER_CONTEXT_PAGE, ctx_page, SV39_R | SV39_W);
+    printf("USER ALL MAP OK\n");
+    return user_pgtable_root;
+}
+
+void *set_user_context(uint32 pid)
+{
+    void *ret = alloc_free_page();
+    map_page(kernel_pgtable_root, GET_KERNEL_USER_CONTEXT_PAGE(pid), ret, SV39_R | SV39_W);
+    return ret;
 }
 
 void set_pgtable(void *table)
 {
-    w_satp(SATP_SV39 | ((uint64)table >> 12));
+    w_satp(CONV_SV39_PGTABLE(table));
     sfence_vma();
     printf("SET PAGE TABLE %p\n", table);
 }
@@ -163,4 +225,12 @@ void init_memory()
     sv39_pte *root = init_kernel_pgtable();
     set_pgtable(root);
     init_allocator(IDENTICAL_SEG_END, MALLOC_INIT_PAGENUM);
+}
+
+void *convert_user_addr(void *user_pgtable, void *addr)
+{
+    sv39_pte *pte = find_pte(user_pgtable, addr);
+    char *ret = pte->ppn << 12;
+    ret += (uint64)addr & (PAGESIZE - 1);
+    return ret;
 }
