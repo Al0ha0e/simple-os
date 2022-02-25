@@ -4,7 +4,7 @@
 #include "../libs/elf.h"
 
 static page_list *identical_pglist;
-sv39_pte *kernel_pgtable_root;
+static sv39_pte *kernel_pgtable_root;
 static uint32 free_pages[FREE_PAGE_COUNT];
 static uint32 free_page_top;
 
@@ -90,7 +90,7 @@ void free_free_page(void *page)
 
 void *get_kernel_pgtable()
 {
-    return CONV_SV39_PGTABLE(kernel_pgtable_root);
+    return kernel_pgtable_root;
 }
 
 sv39_pte *find_pte(sv39_pte *root, void *vaddr)
@@ -240,4 +240,46 @@ void *convert_user_addr(void *user_pgtable, void *addr)
     char *ret = pte->ppn << 12;
     ret += (uint64)addr & (PAGESIZE - 1);
     return ret;
+}
+
+static void copy_user_pageseg(void *dst_pgtable_root, memory_seg *dst, memory_seg *src)
+{
+    dst->st_vaddr = src->st_vaddr;
+    dst->flags = src->flags;
+    char w = dst->flags & SV39_W;
+    vector *src_pairs = &(src->user_kernel);
+    vector *dst_pairs = &(dst->user_kernel);
+    if (w)
+    {
+        for (int i = 0; i < src_pairs->count; i++)
+        {
+            user_kernel_addr_mapping *dst_pair = vector_extend(dst_pairs);
+            user_kernel_addr_mapping *src_pair = vector_get_item(src_pairs, i);
+            dst_pair->uaddr = src_pair->uaddr;
+            dst_pair->kaddr = alloc_identical_page();
+            map_page(dst_pgtable_root, dst_pair->uaddr, dst_pair->kaddr, dst->flags);
+            memcpy(dst_pair->kaddr, src_pair->kaddr, PAGESIZE);
+        }
+    }
+    else
+    {
+        for (int i = 0; i < src_pairs->count; i++)
+        {
+            user_kernel_addr_mapping *dst_pair = vector_extend(dst_pairs);
+            user_kernel_addr_mapping *src_pair = vector_get_item(src_pairs, i);
+            dst_pair->uaddr = src_pair->uaddr;
+            dst_pair->kaddr = src_pair->kaddr;
+            map_page(dst_pgtable_root, dst_pair->uaddr, dst_pair->kaddr, dst->flags);
+        }
+    }
+}
+
+void copy_userproc_addr_space(void *dst_pgtable_root, vector *dst_addr_space, vector *src_addr_space)
+{
+    memory_seg *dst;
+    for (int i = 0; i < src_addr_space->count; i++)
+    {
+        dst = init_memory_seg(vector_extend(dst_addr_space));
+        copy_user_pageseg(dst_pgtable_root, dst, vector_get_item(src_addr_space, i));
+    }
 }

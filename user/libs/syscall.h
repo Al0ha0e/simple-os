@@ -16,20 +16,18 @@ static inline uint64 syscall(uint64 arg0, uint64 arg1, uint64 arg2, uint64 which
 #define SYSCALL_WRITE 64
 #define SYSCALL_EXIT 93
 #define SYSCALL_SCHED_YIELD 124
+#define SYSCALL_GETPID 172
+#define SYSCALL_FORK 220
+#define SYSCALL_EXEC 221
 
-uint64 sys_write(uint64 fd, void *buffer, size_t count)
-{
-    return syscall(fd, (uint64)buffer, count, SYSCALL_WRITE);
-}
+uint64 sys_write(uint64 fd, void *buffer, size_t count);
 
-uint64 sys_exit(int32 state)
-{
-    return syscall(state, 0, 0, SYSCALL_EXIT);
-}
+uint64 sys_exit(int32 state);
 
-uint64 sys_sched_yield()
-{
-    return syscall(0, 0, 0, SYSCALL_SCHED_YIELD);
-}
+uint64 sys_sched_yield();
+
+uint64 sys_getpid();
+
+uint64 sys_fork();
 
 #endif

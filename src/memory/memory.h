@@ -73,4 +73,6 @@ void *init_userproc_pgtable(void *ctx_page);
 void init_userproc_addr_space(void *user_pgtable_root, elf_header *elf, vector *segs);
 
 void *convert_user_addr(void *user_pgtable, void *addr);
+
+void copy_userproc_addr_space(void *dst_pgtable_root, vector *dst_addr_space, vector *src_addr_space);
 #endif

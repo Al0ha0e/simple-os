@@ -1,8 +1,6 @@
 #include "memory.h"
 #include "../riscv/riscv.h"
 
-extern sv39_pte *kernel_pgtable_root;
-
 static empty_block *freelist = NULL;
 static void *heap_st;
 static void *heap_en;
@@ -12,7 +10,7 @@ static void get_pages(void *st, uint32 n)
     for (int i = 0; i < n; i++)
     {
         void *paddr = alloc_free_page();
-        map_page(kernel_pgtable_root, st + i * PAGESIZE, paddr, SV39_R | SV39_W);
+        map_page(get_kernel_pgtable(), st + i * PAGESIZE, paddr, SV39_R | SV39_W);
     }
 }
 

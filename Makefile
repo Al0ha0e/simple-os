@@ -24,6 +24,10 @@ OBJS = \
 	src/trap/interrupt.o\
 	src/proc/proc.o
 
+USER_LIB_OBJS = \
+	user/libs/printf.o\
+	user/libs/syscall.o
+
 USER_OBJS = \
 	user/root_proc.o
 
@@ -67,9 +71,9 @@ src/user.o: src/user.S $(USER_OBJS)
 # 	rm -f ./.depend
 # 	$(CC) -MM $(SRCS) > ./.depend;
 
-user/root_proc.o: user/entry.o user/root_proc.c user/user.ld
+user/root_proc.o: $(USER_LIB_OBJS) user/entry.o user/root_proc.c user/user.ld
 	$(CC) -c -nostdlib -mcmodel=medany user/root_proc.c -o user/root_proc.tmp
-	$(LD) $(LDFLAGS) -T user/user.ld -o user/root_proc.o user/entry.o user/root_proc.tmp
+	$(LD) $(LDFLAGS) -T user/user.ld -o user/root_proc.o  $(USER_LIB_OBJS) user/entry.o user/root_proc.tmp
 	rm user/root_proc.tmp
 
 # test: user/entry.o user/test.o user/user.ld
@@ -79,4 +83,6 @@ user/root_proc.o: user/entry.o user/root_proc.c user/user.ld
 
 clean:
 	rm -f $(OBJS)
+	rm -f $(USER_LIB_OBJS)
+	rm -f $(USER_OBJS)
 	rm -f src/kernel

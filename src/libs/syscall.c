@@ -23,7 +23,6 @@ static void sys_write(uint64 fd, void *buffer, size_t count)
             console_putchar(now[i]);
         cnt += det;
     }
-    console_putchar('\n');
 }
 
 static void sys_exit(int32 state)
@@ -45,19 +44,33 @@ static void sys_sched_yield()
     }
 }
 
+static void sys_getpid()
+{
+    process_control_block *pcb = get_curr_pcb();
+    pcb->kernel_context->gprs[10] = pcb->pid;
+}
+
+static void sys_fork()
+{
+    fork();
+}
+
+static void sys_exec() {}
+
 void handle_syscall(uint64 arg0, uint64 arg1, uint64 arg2, uint64 which)
 {
     switch (which)
     {
     case SYSCALL_WRITE:
-        sys_write(arg0, arg1, arg2);
-        break;
+        return sys_write(arg0, arg1, arg2);
     case SYSCALL_EXIT:
-        sys_exit(arg0);
-        break;
+        return sys_exit(arg0);
     case SYSCALL_SCHED_YIELD:
-        sys_sched_yield();
-        break;
+        return sys_sched_yield();
+    case SYSCALL_GETPID:
+        return sys_getpid();
+    case SYSCALL_FORK:
+        return sys_fork();
     default:
         break;
     }

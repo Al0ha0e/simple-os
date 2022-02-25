@@ -36,11 +36,11 @@ void handle_trap(rv64_context ctx, rv64_scause scause, uint64 stval)
     }
     else
     {
-        printf("EXCEPTION scause %p stval %p sepc %p\n", scause, stval, ctx.sepc);
+        // printf("EXCEPTION scause %p stval %p sepc %p\n", scause, stval, ctx.sepc);
         switch (scause.exception_code)
         {
         case 8:
-            printf("SYSCALL %d\n", ctx.gprs[17]);
+            // printf("SYSCALL %d\n", ctx.gprs[17]);
             handle_syscall(ctx.gprs[10], ctx.gprs[11], ctx.gprs[12], ctx.gprs[17]);
             ctx.sepc += 4;
             break;
