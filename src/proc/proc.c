@@ -71,7 +71,7 @@ void exec_from_mem(elf_header *elf)
     trap_return(USER_CONTEXT_VADDR, CONV_SV39_PGTABLE(pcb->pagetable_root));
 }
 
-void fork()
+void proc_fork()
 {
     process_control_block *ori = current_pcb;
     uint32 pid = alloc_pid();

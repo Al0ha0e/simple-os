@@ -52,7 +52,7 @@ static void sys_getpid()
 
 static void sys_fork()
 {
-    fork();
+    proc_fork();
 }
 
 static void sys_exec() {}

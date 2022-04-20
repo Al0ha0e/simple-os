@@ -28,7 +28,8 @@ void handle_trap(rv64_context ctx, rv64_scause scause, uint64 stval)
         case 5:
             uint64 now = r_time();
             prev = now;
-            set_timer(r_time() + 10000000L);
+            set_timer(r_time() + QEMU_CLOCK_FREQ);
+            proc_schedule();
             break;
         default:
             break;

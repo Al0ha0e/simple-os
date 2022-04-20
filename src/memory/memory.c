@@ -246,31 +246,16 @@ static void copy_user_pageseg(void *dst_pgtable_root, memory_seg *dst, memory_se
 {
     dst->st_vaddr = src->st_vaddr;
     dst->flags = src->flags;
-    char w = dst->flags & SV39_W;
     vector *src_pairs = &(src->user_kernel);
     vector *dst_pairs = &(dst->user_kernel);
-    if (w)
+    for (int i = 0; i < src_pairs->count; i++)
     {
-        for (int i = 0; i < src_pairs->count; i++)
-        {
-            user_kernel_addr_mapping *dst_pair = vector_extend(dst_pairs);
-            user_kernel_addr_mapping *src_pair = vector_get_item(src_pairs, i);
-            dst_pair->uaddr = src_pair->uaddr;
-            dst_pair->kaddr = alloc_identical_page();
-            map_page(dst_pgtable_root, dst_pair->uaddr, dst_pair->kaddr, dst->flags);
-            memcpy(dst_pair->kaddr, src_pair->kaddr, PAGESIZE);
-        }
-    }
-    else
-    {
-        for (int i = 0; i < src_pairs->count; i++)
-        {
-            user_kernel_addr_mapping *dst_pair = vector_extend(dst_pairs);
-            user_kernel_addr_mapping *src_pair = vector_get_item(src_pairs, i);
-            dst_pair->uaddr = src_pair->uaddr;
-            dst_pair->kaddr = src_pair->kaddr;
-            map_page(dst_pgtable_root, dst_pair->uaddr, dst_pair->kaddr, dst->flags);
-        }
+        user_kernel_addr_mapping *dst_pair = vector_extend(dst_pairs);
+        user_kernel_addr_mapping *src_pair = vector_get_item(src_pairs, i);
+        dst_pair->uaddr = src_pair->uaddr;
+        dst_pair->kaddr = alloc_identical_page();
+        map_page(dst_pgtable_root, dst_pair->uaddr, dst_pair->kaddr, dst->flags);
+        memcpy(dst_pair->kaddr, src_pair->kaddr, PAGESIZE);
     }
 }
 

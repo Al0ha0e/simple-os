@@ -21,7 +21,9 @@ void init_process_list();
 
 void exec_from_mem(elf_header *elf);
 
-void fork();
+void proc_fork();
+
+void proc_schedule();
 
 // void exec();
 

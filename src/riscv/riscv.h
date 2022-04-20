@@ -3,6 +3,8 @@
 
 #include "../libs/types.h"
 
+#define QEMU_CLOCK_FREQ 12500000L
+
 // Machine Status Register, mstatus
 
 #define MSTATUS_MPP_MASK (3L << 11) // previous mode.
