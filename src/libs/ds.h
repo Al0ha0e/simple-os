@@ -37,6 +37,6 @@ void list_remove(linked_list *list, list_node *node);
 void list_delete(linked_list *list, list_node *node);
 void list_pop_front(linked_list *list);
 void list_pop_back(linked_list *list);
-void list_move_to_front();
-void list_move_to_back();
+void list_move_to_front(linked_list *list, list_node *node);
+void list_move_to_back(linked_list *list, list_node *node);
 #endif

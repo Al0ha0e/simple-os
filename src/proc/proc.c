@@ -9,6 +9,7 @@ static process_control_block *current_pcb;
 static vector process_list;
 static uint32 process_ids[MAX_PROCESS_NUM];
 static uint32 process_ids_top;
+static linked_list ready_list;
 
 static uint32 alloc_pid()
 {
@@ -68,6 +69,7 @@ void exec_from_mem(elf_header *elf)
     kernel_context->trap_handler = handle_trap;
     kernel_context->gprs[2] = USER_STACK_PAGE + USER_STACK_INIT_PAGENUM * PAGESIZE;
 
+    list_push_back(&ready_list, pcb);
     trap_return(USER_CONTEXT_VADDR, CONV_SV39_PGTABLE(pcb->pagetable_root));
 }
 
@@ -92,4 +94,12 @@ void proc_fork()
     kernel_context->gprs[10] = 0;
     kernel_context->sepc += 4;
     current_pcb = pcb;
+
+    list_push_front(&ready_list, pcb);
+}
+
+void proc_schedule()
+{
+    current_pcb = ready_list.st->v;
+    list_move_to_back(&ready_list, ready_list.st);
 }

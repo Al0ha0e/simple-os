@@ -34,14 +34,7 @@ static void sys_exit(int32 state)
 
 static void sys_sched_yield()
 {
-    static int sched_cnt = 0;
-    printf("SCHED %d\n", sched_cnt++);
-    if (sched_cnt == 5)
-    {
-        while (1)
-        {
-        }
-    }
+    proc_schedule();
 }
 
 static void sys_getpid()
