@@ -2,10 +2,21 @@
 #include "ds.h"
 #include "../memory/memory.h"
 #include "../riscv/sbi.h"
+#include "libfuncs.h"
 
 linked_list timer_list;
 
 static uint64 timer_id;
+
+static void show_timers()
+{
+    printf("TIMERS\n");
+    for (list_node *now = timer_list.st; now; now = now->next)
+    {
+        timer_info *info = now->v;
+        printf("id %d expire %d\n", info->id, info->expire);
+    }
+}
 
 uint64 set_timer(uint64 expire, timer_type type)
 {
@@ -29,7 +40,6 @@ uint64 set_timer(uint64 expire, timer_type type)
          prev = now, now = now->next)
         ;
     list_push_after(&timer_list, prev, info);
-
     return ret;
 }
 

@@ -95,7 +95,7 @@ void proc_fork()
     kernel_context->kernel_context = kernel_context;
     kernel_context->gprs[10] = 0;
     kernel_context->sepc += 4;
-    current_pcb = pcb;
+    // current_pcb = pcb;
 
     list_push_front(&ready_list, pcb);
 }
@@ -105,7 +105,7 @@ void proc_schedule(int expire)
     if (!expire)
         remove_timer(current_pcb->timer);
     printf("SCHED %d\n", current_pcb->pid);
+    list_move_to_back(&ready_list, ready_list.st);
     current_pcb = ready_list.st->v;
     current_pcb->timer = set_timer(r_time() + TIME_SLICE, TIMER_SCHEDULE);
-    list_move_to_back(&ready_list, ready_list.st);
 }
