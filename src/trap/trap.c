@@ -2,6 +2,7 @@
 #include "../memory/memory.h"
 #include "../proc/proc.h"
 #include "../libs/syscall.h"
+#include "../libs/time.h"
 
 extern void _alltraps();
 extern void _restore();
@@ -28,8 +29,12 @@ void handle_trap(rv64_context ctx, rv64_scause scause, uint64 stval)
         case 5:
             uint64 now = r_time();
             prev = now;
-            set_timer(r_time() + QEMU_CLOCK_FREQ);
-            proc_schedule();
+            for (timer_info *info = get_nearest_timer(); info && info->expire <= now; info = get_nearest_timer())
+            {
+                timer_expire();
+                if (info->type == TIMER_SCHEDULE)
+                    proc_schedule(1);
+            }
             break;
         default:
             break;

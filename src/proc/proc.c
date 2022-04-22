@@ -1,5 +1,6 @@
 #include "proc.h"
 #include "../libs/elf.h"
+#include "../libs/time.h"
 #include "../memory/memory.h"
 #include "../libs/ds.h"
 #include "../trap/trap.h"
@@ -70,6 +71,7 @@ void exec_from_mem(elf_header *elf)
     kernel_context->gprs[2] = USER_STACK_PAGE + USER_STACK_INIT_PAGENUM * PAGESIZE;
 
     list_push_back(&ready_list, pcb);
+    pcb->timer = set_timer(r_time() + TIME_SLICE, TIMER_SCHEDULE);
     trap_return(USER_CONTEXT_VADDR, CONV_SV39_PGTABLE(pcb->pagetable_root));
 }
 
@@ -98,8 +100,12 @@ void proc_fork()
     list_push_front(&ready_list, pcb);
 }
 
-void proc_schedule()
+void proc_schedule(int expire)
 {
+    if (!expire)
+        remove_timer(current_pcb->timer);
+    printf("SCHED %d\n", current_pcb->pid);
     current_pcb = ready_list.st->v;
+    current_pcb->timer = set_timer(r_time() + TIME_SLICE, TIMER_SCHEDULE);
     list_move_to_back(&ready_list, ready_list.st);
 }

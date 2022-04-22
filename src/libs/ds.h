@@ -31,12 +31,16 @@ typedef struct linked_list
 
 void list_insert_front(linked_list *list, list_node *node);
 void list_insert_back(linked_list *list, list_node *node);
+void list_insert_after(linked_list *list, list_node *prev, list_node *node);
 list_node *list_push_front(linked_list *list, void *v);
 list_node *list_push_back(linked_list *list, void *v);
+list_node *list_push_after(linked_list *list, list_node *node, void *v);
 void list_remove(linked_list *list, list_node *node);
-void list_delete(linked_list *list, list_node *node);
-void list_pop_front(linked_list *list);
-void list_pop_back(linked_list *list);
+void *list_delete(linked_list *list, list_node *node);
+void *list_pop_front(linked_list *list);
+void *list_pop_back(linked_list *list);
+list_node *list_remove_front(linked_list *list);
+list_node *list_remove_back(linked_list *list);
 void list_move_to_front(linked_list *list, list_node *node);
 void list_move_to_back(linked_list *list, list_node *node);
 #endif

@@ -20,7 +20,7 @@ static void sys_write(uint64 fd, void *buffer, size_t count)
         det = PAGESIZE - ((uint64)now & (PAGESIZE - 1));
         det = det < count - cnt ? det : count - cnt;
         for (int i = 0; i < det; i++)
-            console_putchar(now[i]);
+            sbi_console_putchar(now[i]);
         cnt += det;
     }
 }
@@ -34,7 +34,7 @@ static void sys_exit(int32 state)
 
 static void sys_sched_yield()
 {
-    proc_schedule();
+    proc_schedule(0);
 }
 
 static void sys_getpid()

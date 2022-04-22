@@ -8,17 +8,17 @@
 #define SBI_CONSOLE_GETCHAR 2
 #define SBI_SHUTDOWN 8
 
-static inline void set_timer(uint64 duration)
+static inline void sbi_set_timer(uint64 duration)
 {
     sbi_call(duration, 0, 0, SBI_SET_TIMER);
 }
 
-static inline void console_putchar(uint64 c)
+static inline void sbi_console_putchar(uint64 c)
 {
     sbi_call(c, 0, 0, SBI_CONSOLE_PUTCHAR);
 }
 
-static inline void shutdown()
+static inline void sbi_shutdown()
 {
     sbi_call(0, 0, 0, SBI_SHUTDOWN);
 }

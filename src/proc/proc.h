@@ -6,10 +6,12 @@
 #include "../libs/ds.h"
 
 #define MAX_PROCESS_NUM 64
+#define TIME_SLICE (QEMU_CLOCK_FREQ / 1L)
 
 typedef struct process_control_block
 {
     uint32 pid;
+    uint64 timer;
     void *pagetable_root;
     rv64_context *kernel_context;
     vector addr_space;
@@ -23,7 +25,7 @@ void exec_from_mem(elf_header *elf);
 
 void proc_fork();
 
-void proc_schedule();
+void proc_schedule(int expire);
 
 // void exec();
 

@@ -25,17 +25,17 @@ static void printint(int xx, int base, int sign)
         buf[i++] = '-';
 
     while (--i >= 0)
-        console_putchar(buf[i]);
+        sbi_console_putchar(buf[i]);
 }
 
 static void
 printptr(uint64 x)
 {
     int i;
-    console_putchar('0');
-    console_putchar('x');
+    sbi_console_putchar('0');
+    sbi_console_putchar('x');
     for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4)
-        console_putchar(digits[x >> (sizeof(uint64) * 8 - 4)]);
+        sbi_console_putchar(digits[x >> (sizeof(uint64) * 8 - 4)]);
 }
 
 // Print to the console. only understands %d, %x, %p, %s.
@@ -53,7 +53,7 @@ void printf(char *fmt, ...)
     {
         if (c != '%')
         {
-            console_putchar(c);
+            sbi_console_putchar(c);
             continue;
         }
         c = fmt[++i] & 0xff;
@@ -74,15 +74,15 @@ void printf(char *fmt, ...)
             if ((s = va_arg(ap, char *)) == 0)
                 s = "(null)";
             for (; *s; s++)
-                console_putchar(*s);
+                sbi_console_putchar(*s);
             break;
         case '%':
-            console_putchar('%');
+            sbi_console_putchar('%');
             break;
         default:
             // Print unknown % sequence to draw attention.
-            console_putchar('%');
-            console_putchar(c);
+            sbi_console_putchar('%');
+            sbi_console_putchar(c);
             break;
         }
     }

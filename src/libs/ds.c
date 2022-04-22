@@ -69,6 +69,14 @@ void list_insert_back(linked_list *list, list_node *node)
     list->en = node;
 }
 
+void list_insert_after(linked_list *list, list_node *prev, list_node *node)
+{
+    if (prev == list->en)
+        list->en = node;
+    node->next = prev->next;
+    prev->next = node;
+}
+
 list_node *list_push_front(linked_list *list, void *v)
 {
     list_node *ret = make_list_node(v);
@@ -80,6 +88,13 @@ list_node *list_push_back(linked_list *list, void *v)
 {
     list_node *ret = make_list_node(v);
     list_insert_back(list, ret);
+    return ret;
+}
+
+list_node *list_push_after(linked_list *list, list_node *node, void *v)
+{
+    list_node *ret = make_list_node(v);
+    list_insert_after(list, node, ret);
     return ret;
 }
 
@@ -108,22 +123,41 @@ void list_remove(linked_list *list, list_node *node)
     node->prev = node->next = NULL;
 }
 
-void list_delete(linked_list *list, list_node *node)
+void *list_delete(linked_list *list, list_node *node)
 {
-    list_remove(list, node);
-    free(node);
+    void *ret = NULL;
+    if (node)
+    {
+        list_remove(list, node);
+        ret = node->v;
+        free(node);
+    }
+    return ret;
 }
 
-void list_pop_front(linked_list *list)
+void *list_pop_front(linked_list *list)
 {
+    return list_delete(list, list->st);
+}
+
+void *list_pop_back(linked_list *list)
+{
+    return list_delete(list, list->en);
+}
+
+list_node *list_remove_front(linked_list *list)
+{
+    list_node *ret = list->st;
     if (list->st)
-        list_delete(list, list->st);
+        list_remove(list, list->st);
+    return ret;
 }
-
-void list_pop_back(linked_list *list)
+list_node *list_remove_back(linked_list *list)
 {
+    list_node *ret = list->en;
     if (list->en)
-        list_delete(list, list->en);
+        list_remove(list, list->en);
+    return ret;
 }
 
 void list_move_to_front(linked_list *list, list_node *node)
