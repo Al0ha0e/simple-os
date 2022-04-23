@@ -7,11 +7,12 @@ void main()
 {
     printf("pid %d\n", sys_getpid());
     uint64 pid = sys_fork();
-    printf("pid %d %d\n", pid, sys_getpid());
+    // printf("pid %d %d\n", pid, sys_getpid());
     if (pid == 0)
     {
-        uint64 pid = sys_fork();
+        // uint64 pid = sys_fork();
         printf("pid2 %d %d\n", pid, sys_getpid());
+        sys_exit(-1);
     }
     while (1)
     {

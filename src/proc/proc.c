@@ -7,7 +7,7 @@
 
 static process_control_block *current_pcb;
 
-static vector process_list;
+static process_control_block process_list[MAX_PROCESS_NUM];
 static uint32 process_ids[MAX_PROCESS_NUM];
 static uint32 process_ids_top;
 static linked_list ready_list;
@@ -23,7 +23,6 @@ static void free_pid(uint32 pid)
 
 void init_process_list()
 {
-    init_vector(&process_list, sizeof(process_control_block), 8);
     process_ids_top = MAX_PROCESS_NUM;
     for (int i = 0; i < MAX_PROCESS_NUM; i++)
         process_ids[i] = i;
@@ -37,10 +36,12 @@ process_control_block *get_curr_pcb()
 static process_control_block *init_pcb(
     process_control_block *pcb,
     uint32 pid,
+    process_state state,
     void *pagetable_root,
     rv64_context *kernel_context)
 {
     pcb->pid = pid;
+    pcb->state = state;
     pcb->pagetable_root = pagetable_root;
     pcb->kernel_context = kernel_context;
     init_vector(&pcb->addr_space, sizeof(memory_seg), 4);
@@ -51,10 +52,11 @@ void exec_from_mem(elf_header *elf)
 {
     uint32 pid = alloc_pid();
 
-    process_control_block *pcb = vector_extend(&process_list);
+    process_control_block *pcb = process_list + pid;
     init_pcb(
         pcb,
         pid,
+        PROC_RUNNING,
         init_userproc_pgtable(init_user_context(pid)),
         GET_KERNEL_USER_CONTEXT_ADDR(pid));
 
@@ -80,10 +82,11 @@ void proc_fork()
     process_control_block *ori = current_pcb;
     uint32 pid = alloc_pid();
 
-    process_control_block *pcb = vector_extend(&process_list);
+    process_control_block *pcb = &process_list[pid];
     init_pcb(
         pcb,
         pid,
+        PROC_READY,
         init_userproc_pgtable(init_user_context(pid)),
         GET_KERNEL_USER_CONTEXT_ADDR(pid));
     memcpy(GET_KERNEL_USER_CONTEXT_ADDR(pid), GET_KERNEL_USER_CONTEXT_ADDR(ori->pid), sizeof(rv64_context));
@@ -105,7 +108,19 @@ void proc_schedule(int expire)
     if (!expire)
         remove_timer(current_pcb->timer);
     printf("SCHED %d\n", current_pcb->pid);
-    list_move_to_back(&ready_list, ready_list.st);
     current_pcb = ready_list.st->v;
     current_pcb->timer = set_timer(r_time() + TIME_SLICE, TIMER_SCHEDULE);
+    list_move_to_back(&ready_list, ready_list.st);
+}
+
+void proc_exit(int32 exit_code)
+{
+    current_pcb->exit_code = exit_code;
+    dispose_pgtable(current_pcb->pagetable_root);
+    dispose_userproc_addr_space(&current_pcb->addr_space);
+    current_pcb->state = PROC_ZOMBIE;
+    // TODO waitpid
+    printf("EXIT pid %d code %d\n", current_pcb->pid, exit_code);
+    list_pop_back(&ready_list);
+    proc_schedule(0);
 }

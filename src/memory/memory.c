@@ -149,6 +149,23 @@ int map_pageseg(sv39_pte *root, void *vaddr, void *paddr, uint64 numpages, uint8
     return 0;
 }
 
+static void dispose_pglevel(sv39_pte *now, int level)
+{
+    sv39_pte *nxt = now;
+    for (int i = 0; i < PAGESIZE / sizeof(sv39_pte); i++, nxt++)
+    {
+        if (nxt->V)
+            level == 3 ? dispose_pglevel(nxt->ppn << 12, 2)
+                       : free_identical_page(nxt->ppn << 12);
+    }
+    free_identical_page(now);
+}
+
+void dispose_pgtable(sv39_pte *root)
+{
+    dispose_pglevel(root, 3);
+}
+
 static void *init_kernel_pgtable()
 {
     printf("------start init page table------\n");
@@ -209,6 +226,21 @@ void init_userproc_addr_space(void *user_pgtable_root, elf_header *elf, vector *
     }
     seg = init_memory_seg(vector_extend(segs));
     map_user_pageseg(user_pgtable_root, seg, USER_STACK_PAGE, NULL, USER_STACK_INIT_PAGENUM * PAGESIZE, SV39_U | SV39_R | SV39_W);
+}
+
+void dispose_userproc_addr_space(vector *segs)
+{
+    for (int i = 0; i < segs->count; i++)
+    {
+        memory_seg *seg = vector_get_item(segs, i);
+        for (int j = 0; j < seg->user_kernel.count; j++)
+        {
+            user_kernel_addr_mapping *mapping = vector_get_item(&(seg->user_kernel), j);
+            free_identical_page(mapping->kaddr);
+        }
+        dispose_vector(&(seg->user_kernel));
+    }
+    dispose_vector(segs);
 }
 
 void *init_user_context(uint32 pid)

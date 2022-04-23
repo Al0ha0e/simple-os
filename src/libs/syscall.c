@@ -27,9 +27,7 @@ static void sys_write(uint64 fd, void *buffer, size_t count)
 
 static void sys_exit(int32 state)
 {
-    while (1)
-    {
-    }
+    proc_exit(state);
 }
 
 static void sys_sched_yield()

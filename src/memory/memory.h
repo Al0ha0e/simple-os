@@ -63,6 +63,7 @@ void *get_kernel_pgtable();
 
 int map_page(sv39_pte *root, void *vaddr, void *paddr, uint8 flags);
 void set_pgtable(void *table);
+void dispose_pgtable(sv39_pte *root);
 
 void init_allocator(void *heap_st, uint32 n);
 void *malloc(size_t size);
@@ -71,6 +72,7 @@ void free(void *addr);
 void *init_user_context(uint32 pid);
 void *init_userproc_pgtable(void *ctx_page);
 void init_userproc_addr_space(void *user_pgtable_root, elf_header *elf, vector *segs);
+void dispose_userproc_addr_space(vector *segs);
 
 void *convert_user_addr(void *user_pgtable, void *addr);
 

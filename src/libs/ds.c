@@ -10,6 +10,11 @@ void init_vector(vector *v, size_t item_size, uint32 capacity)
     v->buffer = malloc(item_size * capacity);
 }
 
+void dispose_vector(vector *v)
+{
+    free(v->buffer);
+}
+
 void vector_push_back(vector *v, void *item)
 {
     memcpy(vector_extend(v), item, v->item_size);
