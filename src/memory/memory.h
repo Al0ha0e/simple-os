@@ -36,20 +36,21 @@ typedef struct empty_block
 
 #define EMPTY_BLOCK_SIZE sizeof(empty_block)
 
-typedef struct user_kernel_addr_mapping
-{
-    void *uaddr;
-    void *kaddr;
-} user_kernel_addr_mapping;
-
-typedef struct memory_seg
+typedef struct addr_seg
 {
     void *st_vaddr;
-    uint8 flags;
-    vector user_kernel;
-} memory_seg;
+    size_t page_cnt;
+    vector kaddrs;
+    uint ref_cnt;
+} addr_seg;
 
-memory_seg *init_memory_seg(memory_seg *seg);
+typedef struct addr_seg_ref
+{
+    list_node *seg;
+    uint8 flags;
+} addr_seg_ref;
+
+addr_seg *init_addr_seg(addr_seg *seg);
 
 void init_memory();
 
@@ -76,5 +77,5 @@ void dispose_userproc_addr_space(vector *segs);
 
 void *convert_user_addr(void *user_pgtable, void *addr);
 
-void copy_userproc_addr_space(void *dst_pgtable_root, vector *dst_addr_space, vector *src_addr_space);
+void copy_userproc_addr_space(void *dst_pgtable_root, vector *dst_addr_space, vector *src_addr_space, int readonly);
 #endif

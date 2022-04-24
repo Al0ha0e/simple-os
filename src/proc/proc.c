@@ -44,7 +44,7 @@ static process_control_block *init_pcb(
     pcb->state = state;
     pcb->pagetable_root = pagetable_root;
     pcb->kernel_context = kernel_context;
-    init_vector(&pcb->addr_space, sizeof(memory_seg), 4);
+    init_vector(&pcb->addr_space, sizeof(addr_seg_ref), 4);
     return pcb;
 }
 
@@ -90,7 +90,7 @@ void proc_fork()
         init_userproc_pgtable(init_user_context(pid)),
         GET_KERNEL_USER_CONTEXT_ADDR(pid));
     memcpy(GET_KERNEL_USER_CONTEXT_ADDR(pid), GET_KERNEL_USER_CONTEXT_ADDR(ori->pid), sizeof(rv64_context));
-    copy_userproc_addr_space(pcb->pagetable_root, &(pcb->addr_space), &(ori->addr_space));
+    copy_userproc_addr_space(pcb->pagetable_root, &(pcb->addr_space), &(ori->addr_space), 0);
 
     ori->kernel_context->gprs[10] = pid;
 

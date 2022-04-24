@@ -2,11 +2,13 @@
 #include "../libs/types.h"
 #include "../libs/libfuncs.h"
 #include "../libs/elf.h"
+#include "../libs/ds.h"
 
 static page_list *identical_pglist;
 static sv39_pte *kernel_pgtable_root;
 static uint32 free_pages[FREE_PAGE_COUNT];
 static uint32 free_page_top;
+static linked_list user_addrseg_list;
 
 extern char kernel_end[];
 extern char kernel_text_end[];
@@ -27,9 +29,10 @@ static inline uint64 get_pgn_ceil(void *addr)
     return (void *)ret;
 }
 
-memory_seg *init_memory_seg(memory_seg *seg)
+addr_seg *init_addr_seg(addr_seg *seg)
 {
-    init_vector(&seg->user_kernel, sizeof(user_kernel_addr_mapping), 4);
+    init_vector(&seg->kaddrs, sizeof(void *), 4);
+    seg->ref_cnt = 1;
     return seg;
 }
 
@@ -186,19 +189,20 @@ static void *init_kernel_pgtable()
     return kernel_pgtable_root;
 }
 
-static void map_user_pageseg(void *root, memory_seg *seg, void *vaddr, void *content, size_t size, uint8 flags)
+static void map_user_addrseg(void *root, addr_seg_ref *seg_ref, void *vaddr, void *content, size_t size, uint8 flags)
 {
-    seg->flags = flags;
+    seg_ref->flags = flags;
+    addr_seg *seg = malloc(sizeof(addr_seg));
+    init_addr_seg(seg);
     seg->st_vaddr = vaddr;
-    user_kernel_addr_mapping *pair;
+    seg->page_cnt = size / PAGESIZE;
+    seg_ref->seg = list_push_back(&user_addrseg_list, seg);
     for (size_t offset = 0; offset < size; offset += PAGESIZE)
     {
         char *dst = (char *)vaddr + offset;
         char *kernel_dst = alloc_identical_page();
         map_page(root, dst, kernel_dst, flags);
-        pair = vector_extend(&seg->user_kernel);
-        pair->uaddr = dst;
-        pair->kaddr = kernel_dst;
+        vector_push_back(&seg->kaddrs, &kernel_dst);
         if (content)
             memcpy(kernel_dst, (char *)content + offset, PAGESIZE <= size - offset ? PAGESIZE : size - offset);
     }
@@ -212,35 +216,41 @@ void *init_userproc_pgtable(void *ctx_page)
     return user_pgtable_root;
 }
 
-void init_userproc_addr_space(void *user_pgtable_root, elf_header *elf, vector *segs)
+void init_userproc_addr_space(void *user_pgtable_root, elf_header *elf, vector *seg_refs)
 {
     program_header *progh = ((char *)elf) + elf->phoff;
     uint8 flags;
-    memory_seg *seg;
+    addr_seg_ref *seg_ref;
     for (int i = 0; i < elf->phnum; i++)
     {
         flags = SV39_U | (progh->flags.E << 3) | (progh->flags.W << 2) | (progh->flags.R << 1);
-        seg = init_memory_seg(vector_extend(segs));
-        map_user_pageseg(user_pgtable_root, seg, progh->vaddr, ((char *)elf) + progh->off, progh->memsz, flags);
+        seg_ref = vector_extend(seg_refs);
+        map_user_addrseg(user_pgtable_root, seg_ref, progh->vaddr, ((char *)elf) + progh->off, progh->memsz, flags);
         progh = progh + 1;
     }
-    seg = init_memory_seg(vector_extend(segs));
-    map_user_pageseg(user_pgtable_root, seg, USER_STACK_PAGE, NULL, USER_STACK_INIT_PAGENUM * PAGESIZE, SV39_U | SV39_R | SV39_W);
+    seg_ref = vector_extend(seg_refs);
+    map_user_addrseg(user_pgtable_root, seg_ref, USER_STACK_PAGE, NULL, USER_STACK_INIT_PAGENUM * PAGESIZE, SV39_U | SV39_R | SV39_W);
 }
 
-void dispose_userproc_addr_space(vector *segs)
+void dispose_userproc_addr_space(vector *seg_refs)
 {
-    for (int i = 0; i < segs->count; i++)
+    for (int i = 0; i < seg_refs->count; i++)
     {
-        memory_seg *seg = vector_get_item(segs, i);
-        for (int j = 0; j < seg->user_kernel.count; j++)
+        addr_seg_ref *seg_ref = vector_get_item(seg_refs, i);
+        addr_seg *seg = (addr_seg *)seg_ref->seg->v;
+        seg->ref_cnt--;
+        if (!seg->ref_cnt)
         {
-            user_kernel_addr_mapping *mapping = vector_get_item(&(seg->user_kernel), j);
-            free_identical_page(mapping->kaddr);
+            for (int j = 0; j < seg->kaddrs.count; j++)
+            {
+                void *kaddr = *((void **)seg->kaddrs.buffer + j);
+                free_identical_page(kaddr);
+            }
+            dispose_vector(&(seg->kaddrs));
+            list_delete(&user_addrseg_list, seg_ref->seg);
         }
-        dispose_vector(&(seg->user_kernel));
     }
-    dispose_vector(segs);
+    dispose_vector(seg_refs);
 }
 
 void *init_user_context(uint32 pid)
@@ -274,29 +284,53 @@ void *convert_user_addr(void *user_pgtable, void *addr)
     return ret;
 }
 
-static void copy_user_pageseg(void *dst_pgtable_root, memory_seg *dst, memory_seg *src)
+static void copy_user_addrseg(void *dst_pgtable_root, addr_seg_ref *dst, addr_seg_ref *src, uint8 flags)
 {
-    dst->st_vaddr = src->st_vaddr;
-    dst->flags = src->flags;
-    vector *src_pairs = &(src->user_kernel);
-    vector *dst_pairs = &(dst->user_kernel);
-    for (int i = 0; i < src_pairs->count; i++)
+    dst->flags = flags;
+    char w = flags & SV39_W;
+    addr_seg *src_seg = (addr_seg *)(src->seg->v);
+    vector *src_kaddrs = &src_seg->kaddrs;
+    char *vaddr = src_seg->st_vaddr;
+    if (!w)
     {
-        user_kernel_addr_mapping *dst_pair = vector_extend(dst_pairs);
-        user_kernel_addr_mapping *src_pair = vector_get_item(src_pairs, i);
-        dst_pair->uaddr = src_pair->uaddr;
-        dst_pair->kaddr = alloc_identical_page();
-        map_page(dst_pgtable_root, dst_pair->uaddr, dst_pair->kaddr, dst->flags);
-        memcpy(dst_pair->kaddr, src_pair->kaddr, PAGESIZE);
+        src_seg->ref_cnt++;
+        dst->seg = src->seg;
+        for (int i = 0; i < src_kaddrs->count; i++)
+        {
+            map_page(dst_pgtable_root, vaddr, *(void **)vector_get_item(src_kaddrs, i), flags);
+            vaddr += PAGESIZE;
+        }
+        return;
     }
+
+    addr_seg *dst_seg = malloc(sizeof(addr_seg));
+    init_addr_seg(dst_seg);
+    dst_seg->st_vaddr = src_seg->st_vaddr;
+    dst_seg->page_cnt = src_seg->page_cnt;
+    vector *dst_kaddrs = &dst_seg->kaddrs;
+    for (int i = 0; i < src_kaddrs->count; i++)
+    {
+        void *dst_kaddr = alloc_identical_page();
+        vector_push_back(dst_kaddrs, &dst_kaddr);
+        map_page(dst_pgtable_root, vaddr, dst_kaddr, flags);
+        memcpy(dst_kaddr, *(void **)vector_get_item(src_kaddrs, i), PAGESIZE);
+        vaddr += PAGESIZE;
+    }
+    dst->seg = list_push_back(&user_addrseg_list, dst_seg);
 }
 
-void copy_userproc_addr_space(void *dst_pgtable_root, vector *dst_addr_space, vector *src_addr_space)
+void copy_userproc_addr_space(void *dst_pgtable_root, vector *dst_addr_space, vector *src_addr_space, int readonly)
 {
-    memory_seg *dst;
+    addr_seg_ref *dst;
+    addr_seg_ref *src;
+    uint8 flags;
     for (int i = 0; i < src_addr_space->count; i++)
     {
-        dst = init_memory_seg(vector_extend(dst_addr_space));
-        copy_user_pageseg(dst_pgtable_root, dst, vector_get_item(src_addr_space, i));
+        dst = vector_extend(dst_addr_space);
+        src = vector_get_item(src_addr_space, i);
+        flags = src->flags;
+        if (readonly)
+            flags &= ~(SV39_W);
+        copy_user_addrseg(dst_pgtable_root, dst, src, flags);
     }
 }
