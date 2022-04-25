@@ -18,3 +18,10 @@ void *memcpy(void *dst, const void *src, size_t n)
         d[i] = ((char *)src)[i];
     return dst;
 }
+
+void panic(char *s)
+{
+    printf("panic: %s\n", s);
+    while (1)
+        ;
+}

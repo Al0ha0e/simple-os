@@ -26,7 +26,7 @@ void init_allocator(void *st, uint32 n)
 static uint32 get_pgcnt(size_t size)
 {
     size_t rem = size & (PAGESIZE - 1);
-    uint32 ret = (size >> 12) + (rem ? 1 : 0);
+    uint32 ret = (size >> PAGESHIFT) + (rem ? 1 : 0);
 }
 
 static void *extend_heap(uint32 n)
