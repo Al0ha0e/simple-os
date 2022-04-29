@@ -5,11 +5,13 @@ SRCS = \
 	src/libs/libfuncs.c\
 	src/libs/ds.c\
 	src/libs/printf.c\
+	src/libs/syscall.c\
 	src/libs/time.c\
 	src/memory/memory.c\
 	src/memory/malloc.c\
 	src/trap/trap.c\
-	src/trap/interrupt.S
+	src/trap/user_trap.S\
+	src/proc/proc.c\
 
 OBJS = \
 	src/entry.o\
@@ -23,8 +25,8 @@ OBJS = \
 	src/memory/memory.o\
 	src/memory/malloc.o\
 	src/trap/trap.o\
-	src/trap/interrupt.o\
-	src/proc/proc.o
+	src/trap/user_trap.o\
+	src/proc/proc.o\
 
 USER_LIB_OBJS = \
 	user/libs/printf.o\

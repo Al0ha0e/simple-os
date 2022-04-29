@@ -32,7 +32,14 @@ typedef struct rv64sstatus
     uint8 uxl : 2;
     uint32 : 29;
     uint8 sd : 1;
-} rv64_sstatus;
+} __attribute__((packed)) rv64_sstatus;
+
+typedef struct rv64scause
+{
+    uint64 exception_code : 63;
+    uint8 interrupt : 1;
+
+} __attribute__((packed)) rv64_scause;
 
 static inline uint64 r_time()
 {
@@ -53,6 +60,36 @@ static inline uint64 r_mstatus()
 static inline void w_mstatus(uint64 x)
 {
     asm volatile("csrw mstatus, %0"
+                 :
+                 : "r"(x));
+}
+
+static inline uint64 r_scause()
+{
+    uint64 x;
+    asm volatile("csrr %0, scause"
+                 : "=r"(x));
+    return x;
+}
+
+static inline void w_scause(uint64 x)
+{
+    asm volatile("csrw scause, %0"
+                 :
+                 : "r"(x));
+}
+
+static inline uint64 r_stval()
+{
+    uint64 x;
+    asm volatile("csrr %0, stval"
+                 : "=r"(x));
+    return x;
+}
+
+static inline void w_stval(uint64 x)
+{
+    asm volatile("csrw stval, %0"
                  :
                  : "r"(x));
 }
@@ -120,7 +157,7 @@ typedef struct stvec
 {
     uint8 mode : 2;
     uint64 base : 62;
-} st_vec;
+} __attribute__((packed)) st_vec;
 
 static inline void w_stvec(uint64 x)
 {
@@ -170,20 +207,16 @@ static inline void init_sv39pte(sv39_pte *pte, void *ppn, uint8 flags)
     set_sv39pte_ppn(pte, ppn);
 }
 
-typedef struct rv64scause
-{
-    uint64 exception_code : 63;
-    uint8 interrupt : 1;
-
-} rv64_scause;
-
 typedef struct rv64context
 {
     uint64 gprs[32];
     uint64 sstatus;
     uint64 sepc;
+    uint64 scause;
+    uint64 stval;
     void *kernel_pgtable;
     void *kernel_context;
+    void *user_context;
     void *trap_handler;
 } rv64_context;
 #endif

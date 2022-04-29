@@ -4,8 +4,8 @@
 #include "../libs/syscall.h"
 #include "../libs/time.h"
 
-extern void _alltraps();
-extern void _restore();
+extern void _user_trap();
+extern void _user_restore();
 
 void init_trap()
 {
@@ -19,8 +19,10 @@ void init_trap()
 
 static uint64 prev = 0;
 
-void handle_trap(rv64_context ctx, rv64_scause scause, uint64 stval)
+void handle_trap(rv64_context ctx)
 {
+    rv64_scause scause = *((rv64_scause *)&ctx.scause);
+    uint64 stval = ctx.stval;
     if (scause.interrupt)
     {
         printf("INTERRUPT scause %p stval %p sepc %p\n", scause, stval, ctx.sepc);
@@ -55,11 +57,10 @@ void handle_trap(rv64_context ctx, rv64_scause scause, uint64 stval)
             break;
         }
     }
-
-    trap_return(USER_CONTEXT_VADDR, CONV_SV39_PGTABLE(get_curr_pcb()->pagetable_root));
+    trap_return(ctx.user_context, CONV_SV39_PGTABLE(get_curr_pcb()->pagetable_root));
 }
 
 void trap_return(void *user_context, void *user_pgtable)
 {
-    asm volatile("jr %0" ::"r"(TRAMPOLINE_PAGE + ((char *)_restore) - ((char *)_alltraps)));
+    asm volatile("jr %0" ::"r"(TRAMPOLINE_PAGE + ((char *)_user_restore) - ((char *)_user_trap)));
 }

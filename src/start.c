@@ -22,7 +22,6 @@ void start()
     printf("-------Simple^OS initialize OK-------\n");
     printf("%p\n", r_time());
     elf_header *elfh = ((elf_header *)app_0_start);
-    sbi_set_timer(r_time() + QEMU_CLOCK_FREQ);
     exec_from_mem(elfh);
 
     // uint64 mstatus = r_mstatus();

@@ -65,16 +65,19 @@ void exec_from_mem(elf_header *elf)
     current_pcb = pcb;
 
     rv64_context *kernel_context = pcb->kernel_context;
-    kernel_context->sepc = elf->entry;
     kernel_context->sstatus = r_sstatus(); //| (1L << 8);
-    kernel_context->kernel_context = kernel_context;
+    kernel_context->sepc = elf->entry;
+    kernel_context->scause = r_scause();
+    kernel_context->stval = r_stval();
     kernel_context->kernel_pgtable = CONV_SV39_PGTABLE(get_kernel_pgtable());
+    kernel_context->kernel_context = kernel_context;
+    kernel_context->user_context = USER_CONTEXT_VADDR - sizeof(rv64_context);
     kernel_context->trap_handler = handle_trap;
     kernel_context->gprs[2] = USER_STACK_PAGE + USER_STACK_INIT_PAGENUM * PAGESIZE;
 
     list_push_back(&ready_list, pcb);
     pcb->timer = set_timer(r_time() + TIME_SLICE, TIMER_SCHEDULE);
-    trap_return(USER_CONTEXT_VADDR, CONV_SV39_PGTABLE(pcb->pagetable_root));
+    trap_return(kernel_context->user_context, CONV_SV39_PGTABLE(pcb->pagetable_root));
 }
 
 void proc_fork()
