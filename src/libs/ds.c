@@ -42,6 +42,12 @@ void *vector_get_item(vector *v, uint32 id)
     return ((char *)v->buffer) + v->item_size * id;
 }
 
+void init_linked_list(linked_list *list)
+{
+    list->st = NULL;
+    list->en = NULL;
+}
+
 static list_node *make_list_node(void *v)
 {
     list_node *ret = malloc(sizeof(list_node));

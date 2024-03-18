@@ -23,4 +23,6 @@ timer_info *timer_expire();
 
 timer_info *get_nearest_timer();
 
+void show_timers();
+
 #endif

@@ -11,7 +11,12 @@ SRCS = \
 	src/memory/malloc.c\
 	src/trap/trap.c\
 	src/trap/user_trap.S\
+	src/trap/kernel_trap.S\
 	src/proc/proc.c\
+	src/sync/sync.c\
+	src/virtio/virtio_disk.c\
+	src/fs/block_manager.c\
+	src/fs/fs.c
 
 OBJS = \
 	src/entry.o\
@@ -26,7 +31,12 @@ OBJS = \
 	src/memory/malloc.o\
 	src/trap/trap.o\
 	src/trap/user_trap.o\
+	src/trap/kernel_trap.o\
 	src/proc/proc.o\
+	src/sync/sync.o\
+	src/virtio/virtio_disk.o\
+	src/fs/block_manager.o\
+	src/fs/fs.o
 
 USER_LIB_OBJS = \
 	user/libs/printf.o\

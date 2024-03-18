@@ -77,7 +77,7 @@ void exec_from_mem(elf_header *elf)
 
     list_push_back(&ready_list, pcb);
     pcb->timer = set_timer(r_time() + TIME_SLICE, TIMER_SCHEDULE);
-    trap_return(kernel_context->user_context, CONV_SV39_PGTABLE(pcb->pagetable_root));
+    user_trap_return(kernel_context->user_context, CONV_SV39_PGTABLE(pcb->pagetable_root));
 }
 
 void proc_fork()
@@ -110,7 +110,10 @@ void proc_schedule(int expire)
 {
     if (!expire)
         remove_timer(current_pcb->timer);
-    printf("SCHED %d\n", current_pcb->pid);
+    printf("SCHED %d st %d en %d\n",
+           current_pcb->pid,
+           ((process_control_block *)(ready_list.st->v))->pid,
+           ((process_control_block *)(ready_list.en->v))->pid);
     current_pcb = ready_list.st->v;
     current_pcb->timer = set_timer(r_time() + TIME_SLICE, TIMER_SCHEDULE);
     list_move_to_back(&ready_list, ready_list.st);
@@ -123,7 +126,14 @@ void proc_exit(int32 exit_code)
     dispose_userproc_addr_space(&current_pcb->addr_space);
     current_pcb->state = PROC_ZOMBIE;
     // TODO waitpid
-    printf("EXIT pid %d code %d\n", current_pcb->pid, exit_code);
+    printf("EXIT pid %d st %d en %d code %d\n",
+           current_pcb->pid,
+           ((process_control_block *)(ready_list.st->v))->pid,
+           ((process_control_block *)(ready_list.en->v))->pid,
+           exit_code);
     list_pop_back(&ready_list);
+    printf("EXIT2 st %d en %d\n",
+           ((process_control_block *)(ready_list.st->v))->pid,
+           ((process_control_block *)(ready_list.en->v))->pid);
     proc_schedule(0);
 }

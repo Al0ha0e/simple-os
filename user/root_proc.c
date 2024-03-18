@@ -12,7 +12,8 @@ void main()
     {
         // uint64 pid = sys_fork();
         printf("pid2 %d %d\n", pid, sys_getpid());
-        sys_exit(-1);
+        // sys_exit(-1);
+        sys_sched_yield();
     }
     while (1)
     {

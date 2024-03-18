@@ -8,15 +8,15 @@ linked_list timer_list;
 
 static uint64 timer_id;
 
-static void show_timers()
-{
-    printf("TIMERS\n");
-    for (list_node *now = timer_list.st; now; now = now->next)
-    {
-        timer_info *info = now->v;
-        printf("id %d expire %d\n", info->id, info->expire);
-    }
-}
+// static void show_timers()
+// {
+//     printf("TIMERS\n");
+//     for (list_node *now = timer_list.st; now; now = now->next)
+//     {
+//         timer_info *info = now->v;
+//         printf("id %d expire %d\n", info->id, info->expire);
+//     }
+// }
 
 uint64 set_timer(uint64 expire, timer_type type)
 {
@@ -45,9 +45,11 @@ uint64 set_timer(uint64 expire, timer_type type)
 
 void remove_timer(uint64 id)
 {
+    printf("RT %d\n", id);
     for (list_node *now = timer_list.st; now; now = now->next)
     {
         timer_info *info = (timer_info *)now->v;
+        printf("TINFO %d %p\n", info->id, info->expire);
         if (info->id == id)
         {
             if (now == timer_list.st)
@@ -55,7 +57,8 @@ void remove_timer(uint64 id)
                 if (now->next)
                     sbi_set_timer(((timer_info *)now->next->v)->expire);
                 else
-                    sbi_set_timer(~0L);
+                    sbi_set_timer(1145141919L);
+                // sbi_set_timer(~0L);
             }
             list_delete(&timer_list, now);
             free(info);
@@ -74,4 +77,15 @@ timer_info *get_nearest_timer()
     if (timer_list.st)
         return timer_list.st->v;
     return NULL;
+}
+
+void show_timers()
+{
+    list_node *st = timer_list.st;
+    while (st)
+    {
+        timer_info *sb = st->v;
+        printf("TINFO %d %p\n", sb->id, sb->expire);
+        st = st->next;
+    }
 }

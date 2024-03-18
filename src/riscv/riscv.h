@@ -3,7 +3,7 @@
 
 #include "../libs/types.h"
 
-#define QEMU_CLOCK_FREQ 12500000L
+#define QEMU_CLOCK_FREQ 12500000L >> 1
 
 // Machine Status Register, mstatus
 

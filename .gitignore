@@ -1,6 +1,7 @@
 *.o
 *.asm
 *.sym
+*.img
 kernel
 test.txt
 compile.txt

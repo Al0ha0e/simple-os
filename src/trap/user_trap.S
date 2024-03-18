@@ -61,6 +61,7 @@ _user_trap:
     LOAD    sp, 37
     
     mv      a0, sp
+    addi    a1, x0, 1
 
     csrw    satp, t0
     sfence.vma

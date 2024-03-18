@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "../virtio/virtio.h"
 #include "../libs/types.h"
 #include "../libs/libfuncs.h"
 #include "../libs/elf.h"
@@ -75,7 +76,7 @@ void free_identical_page(void *page)
 static void init_free_pages()
 {
     for (int i = 0; i < FREE_PAGE_COUNT; i++)
-        free_pages[i] = (IDENTICAL_SEG_END >> 12) + i;
+        free_pages[i] = (IDENTICAL_SEG_END >> PAGESHIFT) + i;
     free_page_top = FREE_PAGE_COUNT;
 }
 
@@ -83,12 +84,12 @@ void *alloc_free_page()
 {
     if (!free_page_top)
         return NULL;
-    return ((uint64)free_pages[--free_page_top]) << 12;
+    return ((uint64)free_pages[--free_page_top]) << PAGESHIFT;
 }
 
 void free_free_page(void *page)
 {
-    free_pages[free_page_top++] = (uint64)page >> 12;
+    free_pages[free_page_top++] = (uint64)page >> PAGESHIFT;
 }
 
 void *get_kernel_pgtable()
@@ -99,7 +100,7 @@ void *get_kernel_pgtable()
 sv39_pte *find_pte(sv39_pte *root, void *vaddr)
 {
     // printf("TRY FIND %p\n", vaddr);
-    uint64 iaddr = (uint64)vaddr >> 12;
+    uint64 iaddr = (uint64)vaddr >> PAGESHIFT;
     sv39_pte *now = root;
     int i, sr = 18;
     for (i = 0; i < 2; i++)
@@ -109,7 +110,7 @@ sv39_pte *find_pte(sv39_pte *root, void *vaddr)
         // printf("PTE %p\n", *now);
         if (now->V)
         {
-            now = now->ppn << 12;
+            now = now->ppn << PAGESHIFT;
         }
         else
         {
@@ -158,8 +159,8 @@ static void dispose_pglevel(sv39_pte *now, int level)
     for (int i = 0; i < PAGESIZE / sizeof(sv39_pte); i++, nxt++)
     {
         if (nxt->V)
-            level == 3 ? dispose_pglevel(nxt->ppn << 12, 2)
-                       : free_identical_page(nxt->ppn << 12);
+            level == 3 ? dispose_pglevel(nxt->ppn << PAGESHIFT, 2)
+                       : free_identical_page(nxt->ppn << PAGESHIFT);
     }
     free_identical_page(now);
 }
@@ -180,10 +181,11 @@ static void *init_kernel_pgtable()
            kernel_rodata_end,
            kernel_data_end,
            kernel_end);
-    map_pageseg(kernel_pgtable_root, KERNBASE, KERNBASE, ((uint64)kernel_text_end - KERNBASE) >> 12, SV39_R | SV39_X);
-    map_pageseg(kernel_pgtable_root, kernel_text_end, kernel_text_end, ((uint64)kernel_rodata_end - (uint64)kernel_text_end) >> 12, SV39_R);
-    map_pageseg(kernel_pgtable_root, kernel_rodata_end, kernel_rodata_end, (IDENTICAL_SEG_END - (uint64)kernel_rodata_end) >> 12, SV39_R | SV39_W);
+    map_pageseg(kernel_pgtable_root, KERNBASE, KERNBASE, ((uint64)kernel_text_end - KERNBASE) >> PAGESHIFT, SV39_R | SV39_X);
+    map_pageseg(kernel_pgtable_root, kernel_text_end, kernel_text_end, ((uint64)kernel_rodata_end - (uint64)kernel_text_end) >> PAGESHIFT, SV39_R);
+    map_pageseg(kernel_pgtable_root, kernel_rodata_end, kernel_rodata_end, (IDENTICAL_SEG_END - (uint64)kernel_rodata_end) >> PAGESHIFT, SV39_R | SV39_W);
     map_page(kernel_pgtable_root, TRAMPOLINE_PAGE, trampoline_start, SV39_X | SV39_R);
+    map_page(kernel_pgtable_root, VIRTIO0, VIRTIO0, SV39_R | SV39_W);
 
     printf("page table init ok \n");
     return kernel_pgtable_root;
@@ -279,7 +281,7 @@ void init_memory()
 void *convert_user_addr(void *user_pgtable, void *addr)
 {
     sv39_pte *pte = find_pte(user_pgtable, addr);
-    char *ret = pte->ppn << 12;
+    char *ret = pte->ppn << PAGESHIFT;
     ret += (uint64)addr & (PAGESIZE - 1);
     return ret;
 }

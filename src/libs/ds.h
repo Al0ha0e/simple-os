@@ -30,6 +30,7 @@ typedef struct linked_list
     list_node *en;
 } linked_list;
 
+void init_linked_list(linked_list *list);
 void list_insert_front(linked_list *list, list_node *node);
 void list_insert_back(linked_list *list, list_node *node);
 void list_insert_after(linked_list *list, list_node *prev, list_node *node);

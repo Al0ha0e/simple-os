@@ -4,6 +4,7 @@
 #include "../proc/proc.h"
 #include "../memory/memory.h"
 #include "../riscv/sbi.h"
+#include "../libs/time.h"
 
 static void sys_write(uint64 fd, void *buffer, size_t count)
 {

@@ -7,6 +7,9 @@
 #include "libs/ds.h"
 #include "libs/elf.h"
 #include "proc/proc.h"
+#include "virtio/virtio.h"
+#include "sync/sync.h"
+#include "fs/fs.h"
 
 __attribute__((aligned(16))) char stack0[4096];
 
@@ -19,6 +22,8 @@ void start()
     init_memory();
     init_trap();
     init_process_list();
+    init_virtio_disk();
+    init_file_system();
     printf("-------Simple^OS initialize OK-------\n");
     printf("%p\n", r_time());
     elf_header *elfh = ((elf_header *)app_0_start);
